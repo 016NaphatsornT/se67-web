@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin Panel | สาขาวิศวกรรมซอฟต์แวร์</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .edit-input { width: 120px; margin-right: 4px; }
+      .edit-btn, .save-btn, .cancel-btn, .del-btn { margin-left: 4px; }
+      li { margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <a class="brand" href="index.html">สาขาวิศวกรรมซอฟต์แวร์</a>
+        <nav class="links">
+          <a href="index.html">กลับหน้าแรก</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <section class="section">
+        <div class="container">
+          <h2>Admin Panel</h2>
+          <p>จัดการข้อมูลหลักสูตร</p>
+          <form id="courseForm">
+            <input type="text" id="courseName" placeholder="ชื่อหลักสูตร" required>
+            <input type="text" id="courseDesc" placeholder="รายละเอียดหลักสูตร" required>
+            <input type="file" id="courseImg" accept="image/*" required>
+            <button type="submit">เพิ่มหลักสูตร</button>
+          </form>
+          <ul id="courseList"></ul>
+
+          <hr>
+          <p>จัดการข้อมูลอาจารย์ประจำหลักสูตร</p>
+          <form id="teacherForm">
+            <input type="text" id="teacherName" placeholder="ชื่ออาจารย์" required>
+            <input type="text" id="teacherDept" placeholder="สาขา/ตำแหน่ง" required>
+            <input type="file" id="teacherImg" accept="image/*" required>
+            <button type="submit">เพิ่มอาจารย์</button>
+          </form>
+          <ul id="teacherList"></ul>
+
+          <!-- ข้อมูลทั่วไป -->
+<h3>แก้ไขข้อมูลทั่วไป</h3>
+<form id="infoForm">
+  <textarea id="generalInfo" rows="3" placeholder="ข้อมูลทั่วไป" required></textarea>
+  <button type="submit">บันทึก</button>
+</form>
+<div id="infoShow"></div>
+<hr>
+
+<!-- ทักษะที่ได้เรียนรู้ -->
+<h3>จัดการทักษะที่ได้เรียนรู้</h3>
+<form id="skillForm">
+  <input type="text" id="skillName" placeholder="ชื่อทักษะ" required>
+  <button type="submit">เพิ่มทักษะ</button>
+</form>
+<ul id="skillList"></ul>
+<hr>
+
+<!-- ห้องปฏิบัติการ -->
+<h3>จัดการห้องปฏิบัติการ</h3>
+<form id="labForm">
+  <input type="text" id="labName" placeholder="ชื่อห้องปฏิบัติการ" required>
+  <input type="text" id="labNumber" placeholder="เลขห้อง" required>
+  <input type="file" id="labImg" accept="image/*" required>
+  <button type="submit">เพิ่มห้อง</button>
+</form>
+<ul id="labList"></ul>
+        </div>
+      </section>
+    </main>
+    <script>
+      // หลักสูตร
+      function renderCourses() {
+        const list = document.getElementById("courseList");
+        list.innerHTML = "";
+        const courses = JSON.parse(localStorage.getItem("courses") || "[]");
+        courses.forEach((c, i) => {
+          const li = document.createElement("li");
+          if (c.editing) {
+            li.innerHTML = `
+              <input class="edit-input" type="text" id="editCourseName${i}" value="${c.name}">
+              <input class="edit-input" type="text" id="editCourseDesc${i}" value="${c.desc}">
+              <input type="file" id="editCourseImg${i}" accept="image/*">
+              ${c.img ? `<img src="${c.img}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : ""}
+              <button class="save-btn">บันทึก</button>
+              <button class="cancel-btn">ยกเลิก</button>
+            `;
+            li.querySelector(".save-btn").onclick = () => {
+              courses[i].name = document.getElementById(`editCourseName${i}`).value;
+              courses[i].desc = document.getElementById(`editCourseDesc${i}`).value;
+              const imgInput = document.getElementById(`editCourseImg${i}`);
+              if (imgInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                  courses[i].img = evt.target.result;
+                  delete courses[i].editing;
+                  localStorage.setItem("courses", JSON.stringify(courses));
+                  renderCourses();
+                };
+                reader.readAsDataURL(imgInput.files[0]);
+              } else {
+                delete courses[i].editing;
+                localStorage.setItem("courses", JSON.stringify(courses));
+                renderCourses();
+              }
+            };
+            li.querySelector(".cancel-btn").onclick = () => {
+              delete courses[i].editing;
+              renderCourses();
+            };
+          } else {
+            li.innerHTML = `
+              ${c.img ? `<img src="${c.img}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;margin-right:8px;">` : ""}
+              <b>${c.name}</b>: ${c.desc}
+              <button class="edit-btn">แก้ไข</button>
+              <button class="del-btn">ลบ</button>
+            `;
+            li.querySelector(".edit-btn").onclick = () => {
+              courses[i].editing = true;
+              renderCourses();
+            };
+            li.querySelector(".del-btn").onclick = () => {
+              courses.splice(i, 1);
+              localStorage.setItem("courses", JSON.stringify(courses));
+              renderCourses();
+            };
+          }
+          list.appendChild(li);
+        });
+      }
+      document.getElementById("courseForm").onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById("courseName").value;
+        const desc = document.getElementById("courseDesc").value;
+        const imgInput = document.getElementById("courseImg");
+        const courses = JSON.parse(localStorage.getItem("courses") || "[]");
+        if (imgInput.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            courses.push({ name, desc, img: evt.target.result });
+            localStorage.setItem("courses", JSON.stringify(courses));
+            renderCourses();
+          };
+          reader.readAsDataURL(imgInput.files[0]);
+        }
+        this.reset();
+      };
+      renderCourses();
+
+      // อาจารย์
+      function renderTeachers() {
+        const list = document.getElementById("teacherList");
+        list.innerHTML = "";
+        const teachers = JSON.parse(localStorage.getItem("teachers") || "[]");
+        teachers.forEach((t, i) => {
+          const li = document.createElement("li");
+          if (t.editing) {
+            li.innerHTML = `
+              <input class="edit-input" type="text" id="editTeacherName${i}" value="${t.name}">
+              <input class="edit-input" type="text" id="editTeacherDept${i}" value="${t.dept}">
+              <input type="file" id="editTeacherImg${i}" accept="image/*">
+              ${t.img ? `<img src="${t.img}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : ""}
+              <button class="save-btn">บันทึก</button>
+              <button class="cancel-btn">ยกเลิก</button>
+            `;
+            li.querySelector(".save-btn").onclick = () => {
+              teachers[i].name = document.getElementById(`editTeacherName${i}`).value;
+              teachers[i].dept = document.getElementById(`editTeacherDept${i}`).value;
+              const imgInput = document.getElementById(`editTeacherImg${i}`);
+              if (imgInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                  teachers[i].img = evt.target.result;
+                  delete teachers[i].editing;
+                  localStorage.setItem("teachers", JSON.stringify(teachers));
+                  renderTeachers();
+                };
+                reader.readAsDataURL(imgInput.files[0]);
+              } else {
+                delete teachers[i].editing;
+                localStorage.setItem("teachers", JSON.stringify(teachers));
+                renderTeachers();
+              }
+            };
+            li.querySelector(".cancel-btn").onclick = () => {
+              delete teachers[i].editing;
+              renderTeachers();
+            };
+          } else {
+            li.innerHTML = `
+              ${t.img ? `<img src="${t.img}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;margin-right:8px;">` : ""}
+              ${t.name} (${t.dept})
+              <button class="edit-btn">แก้ไข</button>
+              <button class="del-btn">ลบ</button>
+            `;
+            li.querySelector(".edit-btn").onclick = () => {
+              teachers[i].editing = true;
+              renderTeachers();
+            };
+            li.querySelector(".del-btn").onclick = () => {
+              teachers.splice(i, 1);
+              localStorage.setItem("teachers", JSON.stringify(teachers));
+              renderTeachers();
+            };
+          }
+          list.appendChild(li);
+        });
+      }
+      document.getElementById("teacherForm").onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById("teacherName").value;
+        const dept = document.getElementById("teacherDept").value;
+        const imgInput = document.getElementById("teacherImg");
+        const teachers = JSON.parse(localStorage.getItem("teachers") || "[]");
+        if (imgInput.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            teachers.push({ name, dept, img: evt.target.result });
+            localStorage.setItem("teachers", JSON.stringify(teachers));
+            renderTeachers();
+          };
+          reader.readAsDataURL(imgInput.files[0]);
+        }
+        this.reset();
+      };
+      renderTeachers();
+
+      // ข้อมูลทั่วไป
+      function renderInfo() {
+        const info = localStorage.getItem("generalInfo") || "";
+        document.getElementById("infoShow").textContent = info;
+        document.getElementById("generalInfo").value = info;
+      }
+      document.getElementById("infoForm").onsubmit = function(e) {
+        e.preventDefault();
+        const info = document.getElementById("generalInfo").value;
+        localStorage.setItem("generalInfo", info);
+        renderInfo();
+      };
+      renderInfo();
+
+      // ทักษะที่ได้เรียนรู้
+      function renderSkills() {
+        const list = document.getElementById("skillList");
+        list.innerHTML = "";
+        const skills = JSON.parse(localStorage.getItem("skills") || "[]");
+        skills.forEach((s, i) => {
+          const li = document.createElement("li");
+          if (s.editing) {
+            li.innerHTML = `
+              <input class="edit-input" type="text" id="editSkill${i}" value="${s.name}">
+              <button class="save-btn">บันทึก</button>
+              <button class="cancel-btn">ยกเลิก</button>
+            `;
+            li.querySelector(".save-btn").onclick = () => {
+              skills[i].name = document.getElementById(`editSkill${i}`).value;
+              delete skills[i].editing;
+              localStorage.setItem("skills", JSON.stringify(skills));
+              renderSkills();
+            };
+            li.querySelector(".cancel-btn").onclick = () => {
+              delete skills[i].editing;
+              renderSkills();
+            };
+          } else {
+            li.innerHTML = `${s.name}
+              <button class="edit-btn">แก้ไข</button>
+              <button class="del-btn">ลบ</button>`;
+            li.querySelector(".edit-btn").onclick = () => {
+              skills[i].editing = true;
+              renderSkills();
+            };
+            li.querySelector(".del-btn").onclick = () => {
+              skills.splice(i, 1);
+              localStorage.setItem("skills", JSON.stringify(skills));
+              renderSkills();
+            };
+          }
+          list.appendChild(li);
+        });
+      }
+      document.getElementById("skillForm").onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById("skillName").value;
+        const skills = JSON.parse(localStorage.getItem("skills") || "[]");
+        skills.push({ name });
+        localStorage.setItem("skills", JSON.stringify(skills));
+        renderSkills();
+        this.reset();
+      };
+      renderSkills();
+
+      // ห้องปฏิบัติการ
+      function renderLabs() {
+        const list = document.getElementById("labList");
+        list.innerHTML = "";
+        const labs = JSON.parse(localStorage.getItem("labs") || "[]");
+        labs.forEach((l, i) => {
+          const li = document.createElement("li");
+          if (l.editing) {
+            li.innerHTML = `
+              <input class="edit-input" type="text" id="editLab${i}" value="${l.name}">
+              <button class="save-btn">บันทึก</button>
+              <button class="cancel-btn">ยกเลิก</button>
+            `;
+            li.querySelector(".save-btn").onclick = () => {
+              labs[i].name = document.getElementById(`editLab${i}`).value;
+              delete labs[i].editing;
+              localStorage.setItem("labs", JSON.stringify(labs));
+              renderLabs();
+            };
+            li.querySelector(".cancel-btn").onclick = () => {
+              delete labs[i].editing;
+              renderLabs();
+            };
+          } else {
+            li.innerHTML = `${l.name}
+              <button class="edit-btn">แก้ไข</button>
+              <button class="del-btn">ลบ</button>`;
+            li.querySelector(".edit-btn").onclick = () => {
+              labs[i].editing = true;
+              renderLabs();
+            };
+            li.querySelector(".del-btn").onclick = () => {
+              labs.splice(i, 1);
+              localStorage.setItem("labs", JSON.stringify(labs));
+              renderLabs();
+            };
+          }
+          list.appendChild(li);
+        });
+      }
+      document.getElementById("labForm").onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById("labName").value;
+        const number = document.getElementById("labNumber").value;
+        const imgInput = document.getElementById("labImg");
+        const labs = JSON.parse(localStorage.getItem("labs") || "[]");
+        if (imgInput.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            labs.push({ name, number, img: evt.target.result });
+            localStorage.setItem("labs", JSON.stringify(labs));
+            renderLabs();
+          };
+          reader.readAsDataURL(imgInput.files[0]);
+        }
+        this.reset();
+      };
+      renderLabs();
+    </script>
+  </body>
+</html>
